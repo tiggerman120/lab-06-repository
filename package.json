@@ -19,6 +19,8 @@
   },
   "homepage": "https://github.com/tiggerman120/lab-06-repository#readme",
   "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
     "express": "^4.17.1"
   }
 }
