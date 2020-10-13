@@ -69,4 +69,4 @@ function handleLocation(request, response) {
 
 
 
-let body = $.('body') //selecting the first body tag(which is an object) and its properties
+//let body = $.('body') //selecting the first body tag(which is an object) and its properties
