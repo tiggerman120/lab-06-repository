@@ -13,6 +13,11 @@ Number and name of feature: 2 locations
 Estimate of time needed to complete: 2 hours
 Start time: 3:10pm
 
-Finish time: _____
+Finish time: 5:15pm
 
-Actual time needed to complete: _____
+Actual time needed to complete: 2 hours.
+
+Location constructor createdto create location data
+weather constructor created to create weather data
+handler function created for location data
+handler function created for weather data
