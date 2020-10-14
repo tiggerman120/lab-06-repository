@@ -12,8 +12,8 @@ const PORT = process.env.PORT || 3000; //opens a port OR port 3000
 //middleware method that allows open access to our API
 app.use(cors());
 //simple test route which returns a homepage
-app.get('/', (request, response) => {
-  response.send();
+app.get('/', (request, response) => {//probably needs removed eventually
+  response.send('hello world');
 });
 //a route to demonstrate the throwing of an error
 // app.get('/', (request, response) => {
@@ -30,10 +30,13 @@ app.get('/location', handleLocation);
 
 //gets weather data from json with use of functions
 app.get('/weather', weatherConf);
+//gets trails data from...
+app.get('/trails', trailHandler);
 
 //error message for handling invalid user requests
 function errorMessage(request, response) {
-  response.status(500).send('not found');
+
+  response.status(500).send('OOPS!');
 }
 
 
@@ -46,11 +49,23 @@ function Location(geoData, city) {
   // this.locationData = this;
 }
 //creates weather data
-function Weather(obj2) {
+function Weather(obj2) {//obj2 could be named better
   // this.city = obj2.city.name;
   this.forecast = obj2.weather.description;
   this.time = obj2.datetime;//left side is self-made right side is named by the API THAT IS IMPORTANT TO NAME THEM BY API DOCS
   // this.search_query = city;
+}
+
+function Trail(getTrailData) {
+  this.name = getTrailData.name;
+  this.location = getTrailData.location;
+  this.length = getTrailData.length;
+  this.stars = getTrailData.stars;
+  this.star_votes = getTrailData.starVotes;
+  this.summary = getTrailData.summary;
+  this.url = getTrailData.url;
+  this.conditions = getTrailData.conditionStatus;
+  this.date = getTrailData.conditionDate;
 }
 //when you get to the internet no neatly packed info just tons of crap data. using constructor function to format the data so it looks nice when it goes back to the user. not the whole response from the internet.
 //handles location data. should also throw error message.
@@ -68,10 +83,14 @@ function handleLocation(request, response) { //this response does not work witho
         let locationData = new Location(geoData, city); // "seattle" -> localhost:3000/location?city=seattle //creating a new instance of a city
         response.json(locationData);//send info back to the user.
 
-      });
+      })
+      .catch((error) => {
+        console.log(error);
+        errorMessage();
+      })
   } catch (error) {//if something goes wrong this "catches" it.
     console.log('ERROR', error);//tells me the error
-    response.status(500).send('So sorry');//this sends an error message back to the user
+    errorMessage();//this sends an error message back to the user
   }
 }
 
@@ -79,7 +98,7 @@ function handleLocation(request, response) { //this response does not work witho
 function weatherConf(request, response) {
   try {
     // let weatherArr = [];
-    console.log(request.query);
+    // console.log(request.query);
     let lat = request.query.latitude;//taking the latitude from the (codefellows) front end NOT the API
     let lon = request.query.longitude;//taking the longtitude from the (codefellows) front end NOT the API
     // let city = request.query.search_query;//querys the city information
@@ -89,8 +108,8 @@ function weatherConf(request, response) {
 
     superagent.get(weatherAPI)//query the weather API
       .then(data => {//this is a callback with the weather data from previous line
-        console.log(data.body.data);
-        console.log(weatherAPI);
+        // console.log(data.body.data);//useful information
+        // console.log(weatherAPI);//useful information
         let weatherArr = data.body.data.map(weather => {//this is the start of a map method loop that is used to turn raw weatherdata
           return new Weather(weather);//this creates a new instance of the city queryd by user
           //weatherArr.push(skyData);//pushes the data into an empty array to store values
@@ -102,6 +121,34 @@ function weatherConf(request, response) {
   }
 }
 
+function trailHandler(request, response) {
+  console.log(request);
+  try {
+    console.log(request.query);//the client is requesting information
+    //this is the information being requested below
+    let lat = request.query.latitude;//taking the latitude from the codefellows front end
+    let lon = request.query.longitude;//taking the longitude from the codefellows front end
+    let key = process.env.TRAIL_API_KEY;//THIS GETS THE WEATHER API
+    const trailAPI = `https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&maxDistance=200&key=${key}`
+
+    //requesting data from API
+    superagent.get(trailAPI)//query the trail API
+      .then(trailData => {
+        console.log(trailData.body);
+        let trailArr = trailData.body.trails.map(trail => {
+          // parseFloat(trailArr);
+          return new Trail(trail);
+        })
+        response.json(trailArr);
+      })
+      .catch ((error) => {
+        console.log(error)
+        errorMessage()
+      });
+  } catch (error) {//i need this if things go bad
+    errorMessage();//this sends an error message if the catch throws
+  }//catch statements could be written better
+}
 
 app.get('*', errorMessage)
 
