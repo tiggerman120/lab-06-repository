@@ -1,3 +1,7 @@
+GEOCODE_API_KEY = https://my.locationiq.com/dashboard
+WEATHER_API_KEY = https://www.weatherbit.io/account/dashboard
+YELP_API_KEY = https://www.yelp.com/developers/documentation/v3/business_search
+
 Number and name of feature: 1 repo setup
 
 Estimate of time needed to complete: 10minutes
