@@ -22,6 +22,7 @@ app.get('/add', (req, res) => {
   //(first_name, last_name) VALUES ($1, $2) -> lets update with real values
   //those values are going to be inserted into our actual query later (client.query)
   let SQL = 'INSERT INTO people (first_name, last_name) VALUES ($1, $2) RETURNING *;';
+  let sqlArr = [];
   let name = [firstName, lastName];
 
   client.query
