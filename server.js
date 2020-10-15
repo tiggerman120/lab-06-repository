@@ -167,7 +167,7 @@ function trailHandler(request, response) {
 function databaseStorage(location) {
   let sql = 'INSERT INTO location (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4)'
   let sqlArr = [location.search_query, location.formatted_query, location.latitude, location.longitude];
-  client.query(sql, sqlArr);
+  client.query(sql, sqlArr);//this asks the sql client for the information
 
 }
 
