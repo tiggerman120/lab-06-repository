@@ -2,15 +2,20 @@
 //pulling in express packages
 require('dotenv').config(); //requires the dotenv hidden file
 const express = require('express');
+const pg = require('pg');
 const superagent = require('superagent');
 const cors = require('cors');
 
 //application constants
 const app = express();
 const PORT = process.env.PORT || 3000; //opens a port OR port 3000
+const client = new pg.Client(process.env.DATABASE_URL);
+client.on('error', console.error);
+client.connect();
 
 //middleware method that allows open access to our API
 app.use(cors());
+
 //simple test route which returns a homepage
 app.get('/', (request, response) => {//probably needs removed eventually
   response.send('hello world');
@@ -27,11 +32,13 @@ app.get('/', (request, response) => {//probably needs removed eventually
 
 //gets location data from json with use of functions
 app.get('/location', handleLocation);
-
 //gets weather data from json with use of functions
 app.get('/weather', weatherConf);
 //gets trails data from...
 app.get('/trails', trailHandler);
+
+
+app.get('*', errorMessage)
 
 //error message for handling invalid user requests
 function errorMessage(request, response) {
@@ -61,11 +68,13 @@ function Trail(getTrailData) {
   this.location = getTrailData.location;
   this.length = getTrailData.length;
   this.stars = getTrailData.stars;
-  this.star_votes = getTrailData.starVotes;
+  this.star_votes = getTrailData.starVotes;//these are the values needed for the codefellows front end
   this.summary = getTrailData.summary;
   this.url = getTrailData.url;
   this.conditions = getTrailData.conditionStatus;
-  this.date = getTrailData.conditionDate;
+  this.condition_date = getTrailData.conditionDate.split(' ')[0];
+
+  this.condition_time = getTrailData.conditionDate.split(' ')[1];
 }
 //when you get to the internet no neatly packed info just tons of crap data. using constructor function to format the data so it looks nice when it goes back to the user. not the whole response from the internet.
 //handles location data. should also throw error message.
@@ -77,16 +86,21 @@ function handleLocation(request, response) { //this response does not work witho
     const city = request.query.city; //querys the city information
     let key = process.env.GEOCODE_API_KEY;//setting keys value for key value pair
     const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${city}&format=json&limit=1`;// finding the city info using the key/value pair
-    superagent.get(url)//going to get the city information from url path
-      .then(data => { //data already has data in it from previous line
-        let geoData = data.body[0];//setting the data to a variable named geoData
-        let locationData = new Location(geoData, city); // "seattle" -> localhost:3000/location?city=seattle //creating a new instance of a city
-        response.json(locationData);//send info back to the user.
-
-      })
-      .catch((error) => {
-        console.log(error);
-        errorMessage();
+    let sql = 'SELECT * FROM location WHERE search_query=$1' //select all from location where search_query is the first thing in the array(index 0 sql is dumb)
+    let sqlArr = [city];//an array with the city data inside of it
+    client.query(sql, sqlArr)//querying the sql client
+      .then(sqldata => {
+        if (sqldata.rows.length) {//if rows has a length greater than zero the if statement fires
+          response.json(sqldata.rows[0]);//sends the table to the user from the database
+        } else {
+          superagent.get(url)//going to get the city information from url path
+            .then(data => { //data already has data in it from previous line
+              let geoData = data.body[0];//setting the data to a variable named geoData
+              let locationData = new Location(geoData, city); // "seattle" -> localhost:3000/location?city=seattle //creating a new instance of a city
+              databaseStorage(locationData)
+              response.json(locationData);//send info back to the user.
+            })
+        }
       })
   } catch (error) {//if something goes wrong this "catches" it.
     console.log('ERROR', error);//tells me the error
@@ -133,16 +147,16 @@ function trailHandler(request, response) {
 
     //requesting data from API
     superagent.get(trailAPI)//query the trail API
-      .then(trailData => {
-        console.log(trailData.body);
-        let trailArr = trailData.body.trails.map(trail => {
+      .then(trailData => {//trailData is a callback name with the trailAPI data
+        // console.log(trailData.body);
+        let trailArr = trailData.body.trails.map(trail => {//looping through trailData using the map method to output trail
           // parseFloat(trailArr);
-          return new Trail(trail);
+          return new Trail(trail);//returning a instance with the value of trail
         })
-        response.json(trailArr);
+        response.json(trailArr);//sending that info back to the user
       })
-      .catch ((error) => {
-        console.log(error)
+      .catch((error) => {
+        console.log(error)//this is if things go wrong in the get section
         errorMessage()
       });
   } catch (error) {//i need this if things go bad
@@ -150,7 +164,12 @@ function trailHandler(request, response) {
   }//catch statements could be written better
 }
 
-app.get('*', errorMessage)
+function databaseStorage(location) {
+  let sql = 'INSERT INTO location (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4)'
+  let sqlArr = [location.search_query, location.formatted_query, location.latitude, location.longitude];
+  client.query(sql, sqlArr);
+
+}
 
 app.listen(PORT, () => {
   console.log(`server up: ${PORT}`);
