@@ -5,6 +5,7 @@ const express = require('express');
 const pg = require('pg');
 const superagent = require('superagent');
 const cors = require('cors');
+const { response } = require('express');
 
 //application constants
 const app = express();
@@ -36,7 +37,8 @@ app.get('/location', handleLocation);
 app.get('/weather', weatherConf);
 //gets trails data from...
 app.get('/trails', trailHandler);
-
+//gets movie data from...
+app.get('/movies', superSecretAgent);
 
 app.get('*', errorMessage)
 
@@ -73,8 +75,27 @@ function Trail(getTrailData) {
   this.url = getTrailData.url;
   this.conditions = getTrailData.conditionStatus;
   this.condition_date = getTrailData.conditionDate.split(' ')[0];
-
   this.condition_time = getTrailData.conditionDate.split(' ')[1];
+}
+
+function Movie(movieHandler) {
+  this.title = movieHandler.original_title;
+  this.overview = movieHandler.overview;
+  this.average_votes = movieHandler.vote_average;
+  this.total_votes = movieHandler.vote_count;
+  this.image_url = `https://image.tmdb.org/t/p/w500/${movieHandler.poster_path}`
+  console.log(this.image_url);
+  console.log(movieHandler);
+  this.popularity = movieHandler.popularity;
+  this.released_on = movieHandler.release_date;
+}
+
+function Yelp(yelpHandler) {
+  this.name = yelpHandler.name;
+  this.image_url = yelpHandler.image_url;
+  this.price = yelpHandler.price;
+  this.rating = yelpHandler.rating;
+  this.url = yelpHandler.url;
 }
 //when you get to the internet no neatly packed info just tons of crap data. using constructor function to format the data so it looks nice when it goes back to the user. not the whole response from the internet.
 //handles location data. should also throw error message.
@@ -136,9 +157,9 @@ function weatherConf(request, response) {
 }
 
 function trailHandler(request, response) {
-  console.log(request);
+
   try {
-    console.log(request.query);//the client is requesting information
+    //the client is requesting information
     //this is the information being requested below
     let lat = request.query.latitude;//taking the latitude from the codefellows front end
     let lon = request.query.longitude;//taking the longitude from the codefellows front end
@@ -164,12 +185,63 @@ function trailHandler(request, response) {
   }//catch statements could be written better
 }
 
+function superSecretAgent(request, response) {
+  let movieArr;
+  const fetchMovies = request.query.search_query
+  const movieAPI = `https://api.themoviedb.org/3/search/movie/?api_key=7c369e0c853afa123b8c37409ff0ec46&query=${fetchMovies}`
+  if (!movieAPI) {
+    console.log('no movie api');
+  } else {
+    superagent.get(movieAPI)//getting the movie data from the...
+      .then(movieData => {
+        // console.log(movieData.body);
+        movieArr = movieData.body.results.map(movies => {//mapping over the movieData
+          return new Movie(movies);//creating new instances of the movie object
+        })
+        response.json(movieArr)
+        // console.log(movieArr);
+        // databaseStorage(movieArr);//sending the info to the database
+        // console.log(movieArr);
+        return movieArr
+      }).catch(error => {
+        errorMessage();
+      })
+    // console.log(movieArr)
+    return movieArr;//returning the value of movieArr
+  }
+}
+
+// function movieHandler(request, response) {
+//   const fetchMovies = request.query.search_query;//getting the info
+
+//   console.log(fetchMovies)
+//   console.log(superSecretAgent(fetchMovies))
+//   let movieArr2 = superSecretAgent(fetchMovies)
+
+
+
+
+//   console.log(movieArr2);
+//  ;//sending the info back to the user
+// }
+
+function yelpHandler(request, response) {
+  const fetchYelp = request.query.search_query;
+  let yelpArr = superYelpAgent(fetchYelp);
+  response.json(yelpArr);
+}
+
+// function superYelpAgent
+
+
+
 function databaseStorage(location) {
   let sql = 'INSERT INTO location (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4)'
   let sqlArr = [location.search_query, location.formatted_query, location.latitude, location.longitude];
   client.query(sql, sqlArr);//this asks the sql client for the information
 
 }
+
 
 app.listen(PORT, () => {
   console.log(`server up: ${PORT}`);
