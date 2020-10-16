@@ -35,11 +35,13 @@ app.get('/', (request, response) => {//probably needs removed eventually
 app.get('/location', handleLocation);
 //gets weather data from json with use of functions
 app.get('/weather', weatherConf);
-//gets trails data from...
+//gets trails data from client
 app.get('/trails', trailHandler);
-//gets movie data from...
+//gets movie data from client
 app.get('/movies', superSecretAgent);
-
+//gets yelp data from client
+app.get('/yelp', yelpHandler);
+//gets error message(things go wrong)
 app.get('*', errorMessage)
 
 //error message for handling invalid user requests
@@ -84,8 +86,8 @@ function Movie(movieHandler) {
   this.average_votes = movieHandler.vote_average;
   this.total_votes = movieHandler.vote_count;
   this.image_url = `https://image.tmdb.org/t/p/w500/${movieHandler.poster_path}`
-  console.log(this.image_url);
-  console.log(movieHandler);
+  // console.log(this.image_url);
+  // console.log(movieHandler);
   this.popularity = movieHandler.popularity;
   this.released_on = movieHandler.release_date;
 }
@@ -226,14 +228,30 @@ function superSecretAgent(request, response) {
 // }
 
 function yelpHandler(request, response) {
+  let lat = request.query.latitude;
+  let lon = request.query.longitude;
+  let key = 'Bearer ' + process.env.YELP_API_KEY;
   const fetchYelp = request.query.search_query;
-  let yelpArr = superYelpAgent(fetchYelp);
-  response.json(yelpArr);
+  // console.log(key);
+  const yelpAPI = `https://api.yelp.com/v3/businesses/search?latitude=${lat}&longitude=${lon}&categories=restaurants`
+
+  // function superYelpAgent
+  superagent.get(yelpAPI)
+    .set('Authorization', key)
+    .then(yelpData => {
+      // console.log(yelpData.body);
+      let yelpArr = yelpData.body.businesses.map(yelp => {
+        return new Yelp(yelp);
+      })
+      console.log(yelpArr);
+      response.json(yelpArr)
+      // yelpArr = yelpData.body
+    }).catch(error => {
+      console.log(error);
+    }).catch(error => {
+      errorMessage();
+    });
 }
-
-// function superYelpAgent
-
-
 
 function databaseStorage(location) {
   let sql = 'INSERT INTO location (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4)'
